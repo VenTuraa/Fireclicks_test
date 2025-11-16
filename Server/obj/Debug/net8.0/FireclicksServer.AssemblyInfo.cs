@@ -13,7 +13,7 @@ using System.Reflection;
 [assembly: System.Reflection.AssemblyCompanyAttribute("FireclicksServer")]
 [assembly: System.Reflection.AssemblyConfigurationAttribute("Debug")]
 [assembly: System.Reflection.AssemblyFileVersionAttribute("1.0.0.0")]
-[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0+7a42178f77e81a50fdf49a64dd350d32cc1963f2")]
+[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0+6204900f58f104ae14004ecea9d2d082ac3b6fc3")]
 [assembly: System.Reflection.AssemblyProductAttribute("FireclicksServer")]
 [assembly: System.Reflection.AssemblyTitleAttribute("FireclicksServer")]
 [assembly: System.Reflection.AssemblyVersionAttribute("1.0.0.0")]

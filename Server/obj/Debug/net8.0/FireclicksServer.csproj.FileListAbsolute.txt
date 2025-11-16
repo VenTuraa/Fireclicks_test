@@ -25,3 +25,4 @@ F:\Unity_projects\Fireclicks_test\Server\obj\Debug\net8.0\refint\FireclicksServe
 F:\Unity_projects\Fireclicks_test\Server\obj\Debug\net8.0\FireclicksServer.pdb
 F:\Unity_projects\Fireclicks_test\Server\obj\Debug\net8.0\FireclicksServer.genruntimeconfig.cache
 F:\Unity_projects\Fireclicks_test\Server\obj\Debug\net8.0\ref\FireclicksServer.dll
+F:\Unity_projects\Fireclicks_test\Server\obj\Debug\net8.0\FireclicksServer.sourcelink.json

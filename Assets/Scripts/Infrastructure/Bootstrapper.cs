@@ -1,3 +1,4 @@
+using System;
 using Cysharp.Threading.Tasks;
 using Fireclicks.Infrastructure.Logging;
 using Fireclicks.Infrastructure.StateMachine;
@@ -30,33 +31,7 @@ namespace Fireclicks.Infrastructure
             if (_initialized)
                 return;
 
-            if (!ValidateDependencies())
-                return;
-
             StartAsync().Forget();
-        }
-
-        private bool ValidateDependencies()
-        {
-            if (_stateMachine == null)
-            {
-                Debug.LogError("[Bootstrapper] StateMachine is null!", this);
-                return false;
-            }
-
-            if (_logger == null)
-            {
-                Debug.LogError("[Bootstrapper] Logger is null!", this);
-                return false;
-            }
-
-            if (_stateFactory == null)
-            {
-                Debug.LogError("[Bootstrapper] StateFactory is null!", this);
-                return false;
-            }
-
-            return true;
         }
 
         private async UniTaskVoid StartAsync()
@@ -73,7 +48,7 @@ namespace Fireclicks.Infrastructure
                 await _stateMachine.ChangeState(initialState);
                 _initialized = true;
             }
-            catch (System.Exception ex)
+            catch (Exception ex)
             {
                 _logger.LogError($"Failed to start game: {ex.Message}");
                 Debug.LogException(ex);

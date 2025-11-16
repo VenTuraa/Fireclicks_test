@@ -18,12 +18,10 @@ namespace Fireclicks.Infrastructure.Services
             Instance = this;
         }
 
-        public async UniTask InitializeAsync()
+        public UniTask InitializeAsync()
         {
             if (_initialized)
-                return;
-
-            await UniTask.SwitchToMainThread();
+                return UniTask.CompletedTask;
 
             if (PlayerPrefs.HasKey(PlayerPrefsKey))
             {
@@ -35,6 +33,7 @@ namespace Fireclicks.Infrastructure.Services
             }
 
             _initialized = true;
+            return UniTask.CompletedTask;
         }
 
         public string GetEncryptedToken()

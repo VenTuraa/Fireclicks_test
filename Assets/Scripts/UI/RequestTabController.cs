@@ -9,6 +9,13 @@ namespace Fireclicks.UI
 {
     public class RequestTabController : MonoBehaviour
     {
+        private const string DEFAULT_COUNT_LABEL = "-";
+        private const string STATUS_WAITING = "Waiting for request";
+        private const string STATUS_API_UNAVAILABLE = "API service is unavailable";
+        private const string STATUS_SENDING = "Sending request...";
+        private const string STATUS_EMPTY_RESPONSE = "Empty response from server";
+ 
+
         [SerializeField] private Button _sendRequestButton;
         [SerializeField] private TextMeshProUGUI _requestCountText;
         [SerializeField] private TextMeshProUGUI _statusText;
@@ -18,20 +25,16 @@ namespace Fireclicks.UI
         private void Awake()
         {
             if (_sendRequestButton)
-            {
                 _sendRequestButton.onClick.AddListener(OnSendRequestClicked);
-            }
 
-            UpdateCountLabel("-");
-            UpdateStatus("Waiting for request");
+            UpdateCountLabel(DEFAULT_COUNT_LABEL);
+            UpdateStatus(STATUS_WAITING);
         }
 
         private void OnDestroy()
         {
             if (_sendRequestButton)
-            {
                 _sendRequestButton.onClick.RemoveListener(OnSendRequestClicked);
-            }
         }
 
         private void OnSendRequestClicked()
@@ -46,12 +49,12 @@ namespace Fireclicks.UI
         {
             if (RequestCounterApiService.Instance == null)
             {
-                UpdateStatus("API service is unavailable");
+                UpdateStatus(STATUS_API_UNAVAILABLE);
                 return;
             }
 
             _isSending = true;
-            UpdateStatus("Sending request...");
+            UpdateStatus(STATUS_SENDING);
 
             try
             {
@@ -63,13 +66,13 @@ namespace Fireclicks.UI
                 }
                 else
                 {
-                    UpdateStatus("Empty response from server");
+                    UpdateStatus(STATUS_EMPTY_RESPONSE);
                 }
             }
             catch (Exception ex)
             {
                 UpdateStatus($"Error: {ex.Message}");
-                Debug.LogError(ex.Message);
+                Debug.LogError($"[RequestTabController] Request failed: {ex.Message}", this);
             }
             finally
             {
@@ -80,17 +83,13 @@ namespace Fireclicks.UI
         private void UpdateCountLabel(string value)
         {
             if (_requestCountText)
-            {
                 _requestCountText.text = value;
-            }
         }
 
         private void UpdateStatus(string message)
         {
             if (_statusText)
-            {
-                _statusText.text = message;
-            }
+                _statusText.SetText(message);
         }
     }
 }

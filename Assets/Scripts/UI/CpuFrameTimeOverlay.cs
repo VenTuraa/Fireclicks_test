@@ -3,7 +3,6 @@ using System.Diagnostics;
 using UnityEngine;
 using UnityEngine.UI;
 using TMPro;
-using Debug = UnityEngine.Debug;
 
 namespace Fireclicks.UI
 {
@@ -28,12 +27,6 @@ namespace Fireclicks.UI
             DontDestroyOnLoad(this);
 
             _overlayCanvas = new GameObject("CpuFrameTimeCanvas");
-            if (_overlayCanvas == null)
-            {
-                Debug.LogError("[CpuFrameTimeOverlay] Failed to create canvas!", this);
-                return;
-            }
-
             DontDestroyOnLoad(_overlayCanvas);
 
             if (!SetupCanvas())
@@ -56,12 +49,6 @@ namespace Fireclicks.UI
                 return false;
 
             var canvas = _overlayCanvas.AddComponent<Canvas>();
-            if (canvas == null)
-            {
-                Debug.LogError("[CpuFrameTimeOverlay] Failed to add Canvas component!", this);
-                return false;
-            }
-
             canvas.renderMode = RenderMode.ScreenSpaceOverlay;
             canvas.sortingOrder = CANVAS_SORTING_ORDER;
 
@@ -77,12 +64,6 @@ namespace Fireclicks.UI
                 return false;
 
             var textObj = new GameObject("FrameTimeText");
-            if (textObj == null)
-            {
-                Debug.LogError("[CpuFrameTimeOverlay] Failed to create text object!", this);
-                return false;
-            }
-
             textObj.transform.SetParent(_overlayCanvas.transform, false);
             var textRect = textObj.AddComponent<RectTransform>();
             textRect.anchorMin = new Vector2(1f, 1f);
@@ -92,12 +73,6 @@ namespace Fireclicks.UI
             textRect.sizeDelta = new Vector2(300f, 50f);
 
             _frameTimeText = textObj.AddComponent<TextMeshProUGUI>();
-            if (_frameTimeText == null)
-            {
-                Debug.LogError("[CpuFrameTimeOverlay] Failed to add TextMeshProUGUI component!", this);
-                return false;
-            }
-
             _frameTimeText.text = "CPU Frame Time: 0.00 ms";
             _frameTimeText.alignment = TextAlignmentOptions.TopRight;
             _frameTimeText.fontSize = TEXT_FONT_SIZE;
@@ -146,9 +121,6 @@ namespace Fireclicks.UI
             Cleanup();
         }
 
-        private void OnDisable()
-        {
-        }
 
         private void Cleanup()
         {
