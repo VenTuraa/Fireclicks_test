@@ -73,19 +73,6 @@ Increments the request counter for a given token.
 3. Run `dotnet run` to test
 4. Server will auto-reload on code changes (in Development mode)
 
-### Troubleshooting
-
-#### Server won't start
-**Solution:**
-- Verify .NET 8.0 SDK is installed: `dotnet --version`
-- Check if port 5000 is already in use
-- Review server logs for errors
-
-#### Port already in use
-**Solution:**
-- Change the port in `Properties/launchSettings.json`
-- Or use: `dotnet run --urls "http://localhost:5001"`
-
 ## Important Files
 
 - `Program.cs` - Server entry point and API routes
