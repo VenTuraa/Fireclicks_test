@@ -8,60 +8,40 @@ namespace Fireclicks.UI
         [SerializeField] private GameObject _groupedListTab;
         [SerializeField] private GameObject _requestTab;
 
-        private VirtualizedList _virtualizedList;
-        private GroupedList _groupedList;
-        private VirtualizedList _groupedVirtualizedList;
+        [SerializeField] private VirtualizedList _virtualizedList;
+        [SerializeField] private GroupedList _groupedList;
+        [SerializeField] private VirtualizedList _groupedVirtualizedList;
 
         private void Awake()
         {
-            InitializeComponents();
             InitializeLists();
-        }
-
-        private void InitializeComponents()
-        {
-            if (_listTab != null)
-            {
-                _virtualizedList = _listTab.GetComponentInChildren<VirtualizedList>();
-            }
-
-            if (_groupedListTab != null)
-            {
-                _groupedList = _groupedListTab.GetComponentInChildren<GroupedList>();
-                _groupedVirtualizedList = _groupedListTab.GetComponentInChildren<VirtualizedList>();
-            }
         }
 
         private void InitializeLists()
         {
-            if (_virtualizedList != null)
-            {
+            if (_virtualizedList)
                 _virtualizedList.Initialize();
-            }
-            else if (_listTab != null)
-            {
+            else if (_listTab)
                 Debug.LogWarning($"[TabsController] VirtualizedList not found in {_listTab.name}!", this);
-            }
 
-            if (_groupedList != null)
+            if (_groupedList)
             {
                 _groupedList.Initialize();
 
-                if (_groupedVirtualizedList != null)
+                if (_groupedVirtualizedList)
                 {
                     int totalCount = _groupedList.GetTotalCount();
-                    Debug.Log($"[TabsController] GroupedList total count: {totalCount}");
                     if (totalCount > 0)
                     {
                         _groupedVirtualizedList.SetVisibleItemCount(3);
-                        
+
                         _groupedVirtualizedList.SetTotalCount(totalCount);
-                        
+
                         _groupedVirtualizedList.SetItemCreatedCallback((rect, index) =>
                         {
                             _groupedList.UpdateItemVisual(rect, index);
                         });
-                        
+
                         _groupedVirtualizedList.Initialize();
                     }
                     else

@@ -33,7 +33,7 @@ namespace Fireclicks.UI
         [SerializeField] private Color _goldColor = new(1f, 0.84f, 0f);
 
         private List<GroupedItem> _items;
-        private readonly Dictionary<RectTransform, TextMeshProUGUI> _cachedTextComponents = new Dictionary<RectTransform, TextMeshProUGUI>();
+        private readonly Dictionary<RectTransform, TextMeshProUGUI> _cachedTextComponents = new();
         private bool _initialized;
 
         private void Start()
@@ -54,55 +54,70 @@ namespace Fireclicks.UI
         {
             var items = new List<GroupedItem>();
 
-            int[] pattern = { 1, 2, 3, 1, 2, 3, 1, 2, 1, 2, 1, 2, 1, 2, 1, 1, 1, 1 };
-
             int greenCount = 0;
             int purpleCount = 0;
             int goldCount = 0;
             int index = 0;
+            int cyclePosition = 0;
+            bool isThreeCycle = true;
 
-            foreach (int rarityValue in pattern)
+            while (greenCount < GREEN_COUNT || purpleCount < PURPLE_COUNT || goldCount < GOLD_COUNT)
             {
-                ItemRarity rarity = (ItemRarity)rarityValue;
-
-                bool canAdd = false;
-                switch (rarity)
+                if (greenCount < GREEN_COUNT && purpleCount < PURPLE_COUNT && goldCount < GOLD_COUNT)
                 {
-                    case ItemRarity.Green:
-                        canAdd = greenCount < GREEN_COUNT;
-                        break;
-                    case ItemRarity.Purple:
-                        canAdd = purpleCount < PURPLE_COUNT;
-                        break;
-                    case ItemRarity.Gold:
-                        canAdd = goldCount < GOLD_COUNT;
-                        break;
-                }
-
-                if (canAdd)
-                {
-                    items.Add(new GroupedItem(index, rarity));
-                    index++;
-
-                    switch (rarity)
+                    if (cyclePosition % 3 == 0)
                     {
-                        case ItemRarity.Green:
-                            greenCount++;
-                            break;
-                        case ItemRarity.Purple:
-                            purpleCount++;
-                            break;
-                        case ItemRarity.Gold:
-                            goldCount++;
-                            break;
+                        items.Add(new GroupedItem(index++, ItemRarity.Green));
+                        greenCount++;
                     }
+                    else if (cyclePosition % 3 == 1)
+                    {
+                        items.Add(new GroupedItem(index++, ItemRarity.Purple));
+                        purpleCount++;
+                    }
+                    else
+                    {
+                        items.Add(new GroupedItem(index++, ItemRarity.Gold));
+                        goldCount++;
+                    }
+                    cyclePosition++;
+                }
+                else if (greenCount < GREEN_COUNT && purpleCount < PURPLE_COUNT)
+                {
+                    if (isThreeCycle)
+                    {
+                        isThreeCycle = false;
+                        cyclePosition = 0;
+                    }
+                    
+                    if (cyclePosition % 2 == 0)
+                    {
+                        items.Add(new GroupedItem(index++, ItemRarity.Green));
+                        greenCount++;
+                    }
+                    else
+                    {
+                        items.Add(new GroupedItem(index++, ItemRarity.Purple));
+                        purpleCount++;
+                    }
+                    cyclePosition++;
+                }
+                else if (greenCount < GREEN_COUNT)
+                {
+                    items.Add(new GroupedItem(index++, ItemRarity.Green));
+                    greenCount++;
+                }
+                else if (purpleCount < PURPLE_COUNT)
+                {
+                    items.Add(new GroupedItem(index++, ItemRarity.Purple));
+                    purpleCount++;
                 }
             }
 
             return items;
         }
 
-        public Color GetRarityColor(ItemRarity rarity)
+        private Color GetRarityColor(ItemRarity rarity)
         {
             switch (rarity)
             {

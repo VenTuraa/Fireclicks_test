@@ -60,7 +60,7 @@ namespace Fireclicks.UI
 
         private bool SetupText()
         {
-            if (_overlayCanvas == null)
+            if (!_overlayCanvas)
                 return false;
 
             var textObj = new GameObject("FrameTimeText");
@@ -89,7 +89,7 @@ namespace Fireclicks.UI
             if (!_initialized)
                 return;
 
-            if (_frameTimeText == null || _stringBuilder == null || _stopwatch == null)
+            if (!_frameTimeText || _stringBuilder == null || _stopwatch == null)
                 return;
 
             long currentTime = _stopwatch.ElapsedTicks;

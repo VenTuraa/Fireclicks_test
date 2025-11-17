@@ -38,8 +38,7 @@ namespace Fireclicks.Infrastructure
         private void BindLoadingScreenController()
         {
             Container.Bind<LoadingScreenController>()
-                .FromNewComponentOnNewGameObject()
-                .WithGameObjectName("LoadingScreenController")
+                .FromComponentInHierarchy()
                 .AsSingle()
                 .NonLazy();
         }

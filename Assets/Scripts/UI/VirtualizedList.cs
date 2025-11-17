@@ -16,9 +16,9 @@ namespace Fireclicks.UI
         [SerializeField] private int _totalCount = 1000;
         [SerializeField] private float _itemHeight = 40f;
 
-        private readonly Stack<RectTransform> _pooledItems = new Stack<RectTransform>();
-        private readonly Dictionary<RectTransform, TextMeshProUGUI> _cachedTextComponents = new Dictionary<RectTransform, TextMeshProUGUI>();
-        private readonly List<VisibleItem> _visibleItems = new List<VisibleItem>();
+        private readonly Stack<RectTransform> _pooledItems = new();
+        private readonly Dictionary<RectTransform, TextMeshProUGUI> _cachedTextComponents = new();
+        private readonly List<VisibleItem> _visibleItems = new();
 
         private int _desiredVisibleItemCount;
         private int _firstVisibleIndex = -1;
@@ -174,7 +174,7 @@ namespace Fireclicks.UI
                 MarkDirty(true);
             }
 
-            float currentContentWidth = _content != null ? _content.rect.width : 0f;
+            float currentContentWidth = _content ? _content.rect.width : 0f;
             if (!Mathf.Approximately(currentContentWidth, _lastContentWidth))
             {
                 _lastContentWidth = currentContentWidth;
@@ -248,7 +248,7 @@ namespace Fireclicks.UI
 
         private void UpdateVisibleItem(VisibleItem item, int index, float itemHeight, bool forceLayout)
         {
-            if (item?.Rect == null || _content == null)
+            if (!item?.Rect || !_content)
                 return;
 
             bool indexChanged = item.Index != index;
@@ -303,12 +303,12 @@ namespace Fireclicks.UI
         {
             RectTransform rect = null;
 
-            while (_pooledItems.Count > 0 && rect == null)
+            while (_pooledItems.Count > 0 && !rect)
             {
                 rect = _pooledItems.Pop();
             }
 
-            if (rect == null)
+            if (!rect)
             {
                 rect = Instantiate(_itemPrototype, _content);
             }
@@ -325,7 +325,7 @@ namespace Fireclicks.UI
 
         private void HideVisibleItem(VisibleItem item)
         {
-            if (item?.Rect == null)
+            if (!item?.Rect)
                 return;
 
             item.Index = -1;
@@ -337,7 +337,7 @@ namespace Fireclicks.UI
 
         private void ReturnToPool(VisibleItem item)
         {
-            if (item?.Rect == null)
+            if (!item?.Rect)
                 return;
 
             item.Index = -1;
@@ -362,7 +362,7 @@ namespace Fireclicks.UI
                 return;
 
             TextMeshProUGUI text = rect.GetComponentInChildren<TextMeshProUGUI>(true);
-            if (text != null)
+            if (text)
             {
                 _cachedTextComponents[rect] = text;
             }
@@ -403,11 +403,11 @@ namespace Fireclicks.UI
 
             if (_heightLockedByVisibleCount && _desiredVisibleItemCount > 0)
             {
-                RectTransform viewport = _scrollRect != null
+                RectTransform viewport = _scrollRect
                     ? _scrollRect.viewport ?? _scrollRect.transform as RectTransform
                     : null;
 
-                if (viewport != null)
+                if (viewport)
                 {
                     float viewportHeight = viewport.rect.height;
                     if (viewportHeight > 0f)
@@ -419,14 +419,7 @@ namespace Fireclicks.UI
             else
             {
                 float prototypeHeight = ResolvePrototypeHeight();
-                if (prototypeHeight > 0f)
-                {
-                    _itemHeight = Mathf.Max(MIN_ITEM_HEIGHT, prototypeHeight);
-                }
-                else
-                {
-                    _itemHeight = Mathf.Max(MIN_ITEM_HEIGHT, _itemHeight);
-                }
+                _itemHeight = Mathf.Max(MIN_ITEM_HEIGHT, prototypeHeight > 0f ? prototypeHeight : _itemHeight);
             }
 
             if (!Mathf.Approximately(previous, _itemHeight))
@@ -461,7 +454,7 @@ namespace Fireclicks.UI
 
         private void UpdateContentHeight()
         {
-            if (_content == null)
+            if (!_content)
                 return;
 
             float contentHeight = _totalCount * Mathf.Max(MIN_ITEM_HEIGHT, _itemHeight);
