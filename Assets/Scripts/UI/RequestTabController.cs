@@ -14,7 +14,6 @@ namespace Fireclicks.UI
         private const string STATUS_API_UNAVAILABLE = "API service is unavailable";
         private const string STATUS_SENDING = "Sending request...";
         private const string STATUS_EMPTY_RESPONSE = "Empty response from server";
- 
 
         [SerializeField] private Button _sendRequestButton;
         [SerializeField] private TextMeshProUGUI _requestCountText;

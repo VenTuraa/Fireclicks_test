@@ -9,6 +9,7 @@ namespace Fireclicks.UI
     {
         private const int DEFAULT_BUFFER_SIZE = 1;
         private const float MIN_ITEM_HEIGHT = 10f;
+        private const float SCROLL_UPDATE_THRESHOLD_MULTIPLIER = 0.3f;
 
         [SerializeField] private ScrollRect _scrollRect;
         [SerializeField] private RectTransform _content;
@@ -18,6 +19,7 @@ namespace Fireclicks.UI
 
         private readonly Stack<RectTransform> _pooledItems = new();
         private readonly Dictionary<RectTransform, TextMeshProUGUI> _cachedTextComponents = new();
+        private readonly Dictionary<RectTransform, string> _cachedTextValues = new();
         private readonly List<VisibleItem> _visibleItems = new();
 
         private int _desiredVisibleItemCount;
@@ -30,6 +32,7 @@ namespace Fireclicks.UI
         private float _lastViewportHeight;
         private float _lastContentWidth;
         private float _lastResolvedItemHeight;
+        private float _lastScrollOffset = float.NaN;
 
         private System.Action<RectTransform, int> _onItemCreated;
 
@@ -64,6 +67,12 @@ namespace Fireclicks.UI
                 return;
 
             TrackLayoutChanges();
+        }
+
+        private void LateUpdate()
+        {
+            if (!_initialized)
+                return;
 
             if (_isDirty)
             {
@@ -77,19 +86,19 @@ namespace Fireclicks.UI
             if (_initialized)
                 return;
 
-            if (_scrollRect == null)
+            if (!_scrollRect)
                 _scrollRect = GetComponent<ScrollRect>();
 
-            if (_scrollRect == null)
+            if (!_scrollRect)
             {
                 Debug.LogError("[VirtualizedList] ScrollRect is not assigned.", this);
                 return;
             }
 
-            if (_content == null)
+            if (!_content)
                 _content = _scrollRect.content;
 
-            if (_content == null)
+            if (!_content)
             {
                 Debug.LogError("[VirtualizedList] Content RectTransform is not assigned.", this);
                 return;
@@ -222,13 +231,28 @@ namespace Fireclicks.UI
             float maxOffset = Mathf.Max(0f, _content.sizeDelta.y - viewportHeight);
             scrollOffset = Mathf.Clamp(scrollOffset, 0f, maxOffset);
 
+            float updateThreshold = resolvedItemHeight * SCROLL_UPDATE_THRESHOLD_MULTIPLIER;
+            bool scrollOffsetChanged = float.IsNaN(_lastScrollOffset) || 
+                Mathf.Abs(scrollOffset - _lastScrollOffset) >= updateThreshold;
+
+            if (!scrollOffsetChanged && !_forceRebuild)
+            {
+                return; 
+            }
+
             int computedFirstIndex = Mathf.FloorToInt(scrollOffset / resolvedItemHeight) - DEFAULT_BUFFER_SIZE;
             int maxFirstIndex = Mathf.Max(0, _totalCount - _visibleItems.Count);
             computedFirstIndex = Mathf.Clamp(computedFirstIndex, 0, maxFirstIndex);
 
             bool firstIndexChanged = computedFirstIndex != _firstVisibleIndex;
             bool forceLayout = firstIndexChanged || _forceRebuild;
-            _firstVisibleIndex = computedFirstIndex;
+            
+            if (firstIndexChanged || scrollOffsetChanged)
+            {
+                _firstVisibleIndex = computedFirstIndex;
+                _lastScrollOffset = scrollOffset;
+            }
+            
             _forceRebuild = false;
 
             for (int i = 0; i < _visibleItems.Count; i++)
@@ -242,7 +266,11 @@ namespace Fireclicks.UI
                     continue;
                 }
 
-                UpdateVisibleItem(visibleItem, itemIndex, resolvedItemHeight, forceLayout);
+                bool needsUpdate = visibleItem.Index != itemIndex || forceLayout;
+                if (needsUpdate)
+                {
+                    UpdateVisibleItem(visibleItem, itemIndex, resolvedItemHeight, forceLayout);
+                }
             }
         }
 
@@ -252,25 +280,39 @@ namespace Fireclicks.UI
                 return;
 
             bool indexChanged = item.Index != index;
-            item.Index = index;
+            bool wasInactive = !item.Rect.gameObject.activeSelf;
 
-            if (!item.Rect.gameObject.activeSelf)
+            if (wasInactive)
             {
                 item.Rect.gameObject.SetActive(true);
                 forceLayout = true;
             }
 
-            if (indexChanged || forceLayout)
+            if (indexChanged)
             {
-                float y = -index * itemHeight;
-                item.Rect.anchoredPosition = new Vector2(0f, y);
-                item.Rect.SetSizeWithCurrentAnchors(RectTransform.Axis.Vertical, itemHeight);
-                item.Rect.SetSizeWithCurrentAnchors(RectTransform.Axis.Horizontal, Mathf.Abs(_content.rect.width));
+                item.Index = index;
+            }
 
-                CacheTextComponent(item.Rect);
-                if (_cachedTextComponents.TryGetValue(item.Rect, out TextMeshProUGUI text))
+            float targetY = -index * itemHeight;
+            float targetWidth = Mathf.Abs(_content.rect.width);
+            float targetHeight = itemHeight;
+
+            item.Rect.anchoredPosition = new Vector2(0f, targetY);
+            item.Rect.SetSizeWithCurrentAnchors(RectTransform.Axis.Vertical, targetHeight);
+            item.Rect.SetSizeWithCurrentAnchors(RectTransform.Axis.Horizontal, targetWidth);
+
+            if (indexChanged)
+            {
+                string newText = index.ToString();
+                
+                if (!_cachedTextValues.TryGetValue(item.Rect, out string cachedText) || cachedText != newText)
                 {
-                    text.text = index.ToString();
+                    CacheTextComponent(item.Rect);
+                    if (_cachedTextComponents.TryGetValue(item.Rect, out TextMeshProUGUI text))
+                    {
+                        text.SetText(newText);
+                        _cachedTextValues[item.Rect] = newText;
+                    }
                 }
 
                 _onItemCreated?.Invoke(item.Rect, index);
@@ -342,6 +384,9 @@ namespace Fireclicks.UI
 
             item.Index = -1;
             item.Rect.gameObject.SetActive(false);
+            
+            _cachedTextValues.Remove(item.Rect);
+            
             _pooledItems.Push(item.Rect);
         }
 
@@ -354,6 +399,7 @@ namespace Fireclicks.UI
 
             _visibleItems.Clear();
             _firstVisibleIndex = -1;
+            _lastScrollOffset = float.NaN;
         }
 
         private void CacheTextComponent(RectTransform rect)
@@ -476,6 +522,7 @@ namespace Fireclicks.UI
             ReleaseVisibleItems();
             CleanupPooledItems();
             _cachedTextComponents.Clear();
+            _cachedTextValues.Clear();
         }
 
         private void CleanupPooledItems()

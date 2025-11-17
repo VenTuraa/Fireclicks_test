@@ -18,6 +18,7 @@ namespace Fireclicks.Infrastructure.StateMachine
         private readonly LoadingScreenController _loadingScreenController;
         private readonly IStateFactory _stateFactory;
         private CancellationTokenSource _cancellationTokenSource;
+        private UnityEngine.ResourceManagement.AsyncOperations.AsyncOperationHandle<UnityEngine.ResourceManagement.ResourceProviders.SceneInstance> _loadingHandle = default;
         private bool _disposed;
 
         [Inject]
@@ -53,23 +54,88 @@ namespace Fireclicks.Infrastructure.StateMachine
 
             try
             {
-                var progress = new Progress<float>(progressValue =>
-                {
-                    if (!_disposed && _loadingScreenController != null)
-                    {
-                        _loadingScreenController.SetProgress(progressValue * 100f);
-                    }
-                });
+                _loadingHandle = Addressables.LoadSceneAsync(sceneAddress);
+                
+                float artificialProgress = 0f;
+                float lastRealProgress = 0f;
+                float startTime = Time.realtimeSinceStartup;
+                const float MIN_LOADING_TIME = 0.5f;
+                const float MAX_LOADING_TIME = 3f;
 
-                var handle = Addressables.LoadSceneAsync(sceneAddress);
-                await handle.ToUniTask(
-                    progress: progress,
-                    cancellationToken: _cancellationTokenSource.Token);
+                while (!_loadingHandle.IsDone)
+                {
+                    if (_disposed || _cancellationTokenSource.Token.IsCancellationRequested)
+                    {
+                        if (_loadingHandle.IsValid())
+                        {
+                            Addressables.Release(_loadingHandle);
+                        }
+                        return;
+                    }
+
+                    float realProgress = GetRealProgress();
+                    float elapsedTime = Time.realtimeSinceStartup - startTime;
+                    
+                    if (realProgress > 0f && realProgress < 100f)
+                    {
+                        lastRealProgress = realProgress;
+                        artificialProgress = realProgress;
+                    }
+                    else
+                    {
+                        if (elapsedTime < MIN_LOADING_TIME)
+                        {
+                            artificialProgress = Mathf.Clamp01(elapsedTime / MIN_LOADING_TIME) * 90f;
+                        }
+                        else if (elapsedTime < MAX_LOADING_TIME)
+                        {
+                            float remainingTime = MAX_LOADING_TIME - MIN_LOADING_TIME;
+                            float progressInRemaining = Mathf.Clamp01((elapsedTime - MIN_LOADING_TIME) / remainingTime);
+                            artificialProgress = 90f + (progressInRemaining * 10f);
+                        }
+                        else
+                        {
+                            artificialProgress = 99f;
+                        }
+                    }
+
+                    artificialProgress = Mathf.Clamp(artificialProgress, 0f, 100f);
+
+                    if (_loadingScreenController != null)
+                    {
+                        _loadingScreenController.SetProgress(artificialProgress);
+                    }
+
+                    await UniTask.Yield(PlayerLoopTiming.Update, _cancellationTokenSource.Token);
+                }
 
                 if (_disposed)
+                {
+                    if (_loadingHandle.IsValid())
+                    {
+                        Addressables.Release(_loadingHandle);
+                    }
                     return;
+                }
 
-                _logger.Log("Scene loaded successfully");
+                if (_loadingHandle.Status == UnityEngine.ResourceManagement.AsyncOperations.AsyncOperationStatus.Succeeded)
+                {
+                    _logger.Log("Scene loaded successfully");
+                    if (_loadingScreenController != null)
+                    {
+                        _loadingScreenController.SetProgressImmediate(100f);
+                        await UniTask.Delay(200, cancellationToken: _cancellationTokenSource.Token);
+                    }
+                }
+                else
+                {
+                    _logger.LogError($"Scene loading failed: {_loadingHandle.OperationException?.Message ?? "Unknown error"}");
+                    if (_loadingHandle.IsValid())
+                    {
+                        Addressables.Release(_loadingHandle);
+                    }
+                    throw new InvalidOperationException("Failed to load scene");
+                }
 
                 _loadingScreenController.Hide();
 
@@ -86,6 +152,10 @@ namespace Fireclicks.Infrastructure.StateMachine
             catch (OperationCanceledException)
             {
                 _logger.Log("LoadingState: Loading was cancelled");
+                if (_loadingHandle.IsValid())
+                {
+                    Addressables.Release(_loadingHandle);
+                }
                 _loadingScreenController.Hide();
             }
             catch (Exception ex)
@@ -114,6 +184,31 @@ namespace Fireclicks.Infrastructure.StateMachine
             _disposed = true;
         }
 
+        private float GetRealProgress()
+        {
+            if (!_loadingHandle.IsValid())
+                return 0f;
+
+            float progress = 0f;
+            
+            var downloadStatus = _loadingHandle.GetDownloadStatus();
+            if (downloadStatus.TotalBytes > 0)
+            {
+                progress = downloadStatus.Percent * 100f;
+            }
+            
+            if (progress <= 0f || progress > 100f || float.IsNaN(progress))
+            {
+                float percentComplete = _loadingHandle.PercentComplete;
+                if (!float.IsNaN(percentComplete) && percentComplete >= 0f && percentComplete <= 1f)
+                {
+                    progress = percentComplete * 100f;
+                }
+            }
+
+            return Mathf.Clamp(progress, 0f, 100f);
+        }
+
         private void CancelOperations()
         {
             if (_cancellationTokenSource != null)
@@ -130,6 +225,18 @@ namespace Fireclicks.Infrastructure.StateMachine
                 {
                     _cancellationTokenSource?.Dispose();
                     _cancellationTokenSource = null;
+                }
+            }
+
+            if (_loadingHandle.IsValid())
+            {
+                try
+                {
+                    Addressables.Release(_loadingHandle);
+                }
+                catch (Exception ex)
+                {
+                    _logger.LogError($"Error releasing loading handle: {ex.Message}");
                 }
             }
         }
